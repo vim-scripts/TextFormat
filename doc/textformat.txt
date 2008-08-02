@@ -1,11 +1,12 @@
-*textformat.txt*	Vim Text Formatter  (version 0.9)	    2008-08-01
+*textformat.txt*	Vim Text Formatter  (version 1.0)	    2008-08-03
 
 
 Description	This plugin provides commands and key mappings to quickly
-		align and format text. Text can be aligned to either left or
-		right margin or justified to both margins or centered. The
-		text formatting commands in this plugin are a bit different
-		from those integrated to Vim.
+		align and format text. Text can be easily reformatted and
+		aligned to either left or right margin or justified to both
+		margins or centered. Text formatting commands in this plugin
+		are a bit different from those integrated to Vim. Together
+		they make more powerful command set for formatting text.
 
 Author		Teemu Likonen <tlikonen@iki.fi>
 
@@ -18,6 +19,7 @@ Contents
 	2. Commands				|textformat-commands|
 	3. Default key mappings			|textformat-keymap-default|
 	4. User key mappings			|textformat-keymap-user|
+	5. Version history			|textformat-history|
 
 ==============================================================================
 1. Quick start						    *textformat-start*
@@ -135,20 +137,20 @@ Why do these commands truncate whitespaces? Well, this is a text-formatting
 tool and in plain text paragraphs any extra spaces are considered
 a "typographical flaw." These formatting commands can be used to fix
 whitespace errors in plain text. Another reason is that left-right justify
-commands need to add extra spaces to make lines fit. If you later want to
-reformat such previously justified paragraph and align it to left, for
-example, it's convenient that the tool automatically handles this and removes
-extra spaces. If you want to align text without truncating whitespaces use
-Vim's own align commands: |:left|, |:right| and |:center|.
+commands need to add extra spaces to make lines fill the text area. If you
+later want to reformat previously justified paragraph and align it to left,
+for example, it's convenient that the tool automatically handles this and
+removes extra spaces. If you want to align text without truncating whitespaces
+use Vim's own align commands: |:left|, |:right| and |:center|.
 
 ==============================================================================
 3. Default key mappings				   *textformat-keymap-default*
 
 By default this plugin provides a couple of key mappings for convenient text
-formatting. If some of the mappings have already been defined by user (or are
-taken by some other plugin) then some of the following mappings may not be
-automatically available. See the next section of this manual for information
-on how to change the default mappings.
+formatting. If the mappings have already been defined by user (or are taken by
+other plugins) then some of the following mappings may not be automatically
+available. See the next section of this manual for information on how to
+change the default mappings.
 
 There are key mappings available for normal mode and visual mode. As usual,
 <Leader> is the backslash key by default but it can be changed with
@@ -199,7 +201,8 @@ Visual mode (range of lines) ~
 
 Visual mode mappings do not wrap lines nor otherwise reformat text. They work
 line-by-line, just like their command line equivalents: :AlignLeft,
-:AlignRight, :AlignJustify and :AlignCenter.
+:AlignRight, :AlignJustify and :AlignCenter. (This may change in the future,
+though.)
 
 ==============================================================================
 4. User key mappings				      *textformat-keymap-user*
@@ -231,6 +234,40 @@ the right-hand side (<Plug>...) must be remappable. See Vim's manual for more
 information about mapping commands.
 
 Happy formatting!
+
+==============================================================================
+5. Version history					  *textformat-history*
+
+	v1.0							    2008-08-03
+
+	      - All the commands now follow user's 'expandtab' setting and
+		print leading whitespaces accordingly. Now this works just
+		like :left, :right and :center commands.
+
+	      - The left-aligned last line in justified paragraph did not
+		honor 'joinspaces'. Fixed.
+
+	v0.9							    2008-08-01
+
+	      - Initial upload to http://www.vim.org .
+
+Possible future improvements ~
+
+      - Visual mode \al and \aj could reformat lines with |gw|. It's probably
+	what user expects anyway.
+
+      - Visual mode \aj could detect if there are paragraph endings within the
+	visual area and left-align such paragraphs' last line as well as the
+	visual area's last line. This way it would be similar to what Emacs's
+	C-u M-q does with a region which contains several paragraphs. Again,
+	this is probably the most expected behaviour. The ex command, in turn,
+	would work just line-by-line and not try to do smart things. Simple
+	commands are good building blocks for users' own scripts and mappings.
+
+      - Make left align (maybe justify too) act differently when
+	'formatoptions' has "w". Then trailing whitespace(s) would mean that
+	the paragraph continues to the next line. Also, trailing space should
+	not be stripped when fo+=w (i.e., make it similar to |gw|).
 
 ==============================================================================
 vim: ft=help tw=78 ts=8 norl

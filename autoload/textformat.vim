@@ -1,13 +1,8 @@
 " Text formatter plugin for Vim text editor
 "
-" This plugin provides commands and key mappings to quickly align and format
-" text. Text can be aligned to either left or right margin or justified to
-" both margins or centered. The text formatting commands in this plugin are
-" a bit different from those integrated to Vim.
-"
-" Version:    0.9
+" Version:    1.0
 " Maintainer: Teemu Likonen <tlikonen@iki.fi>
-" GetLatestVimScripts: 0 0 :AutoInstall: textformat.vim
+" GetLatestVimScripts: 2324 1 :AutoInstall: textformat.vim
 "
 " {{{ Copyright and license
 "
@@ -27,7 +22,7 @@
 " along with this program; if not, write to the Free Software
 " Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 "
-" The License text in full:
+" The license text:
 " 	http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 "
 " }}}
@@ -36,26 +31,37 @@
 let s:default_width = 80
 
 function! s:Align_Range_Left(...) range "{{{1
-	if a:0 > 0 && a:1 >= 0
-		" If [indent] is given align the first line accordingly
-		let l:start_ws = repeat(' ',a:1)
-		let l:line_replace = s:Align_String_Left(getline(a:firstline))
-		call setline(a:firstline,l:start_ws.l:line_replace)
+	" Get the indent for the text area (or only for the first line) and
+	" retab it according to 'expandtab'.
+	if a:0 && a:1 >= 0
+		" If indent is given as the parameter form a retabbed
+		" whitespace string.
+		let l:leading_ws = s:Retab_Indent(a:1)
 	else
-		" If [indent] is not given get the indent of the first line
-		" (and possibly the second too in case fo+=2).
-		let l:start_ws = substitute(getline(a:firstline),'\m\S.*','','')
-		let l:line_replace = s:Align_String_Left(getline(a:firstline))
-		call setline(a:firstline,l:start_ws.l:line_replace)
-		if match(&formatoptions,'2') >= 0 && a:lastline > a:firstline
-			let l:start_ws = substitute(getline(a:firstline+1),'\m\S.*','','')
-		endif
+		" If indent is not given as a parameter get the indent of the
+		" first line.
+		execute a:firstline
+		normal! ^
+		let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
 	endif
+
+	" Print the first line
+	let l:line_replace = s:Align_String_Left(getline(a:firstline))
+	call setline(a:firstline,l:leading_ws.l:line_replace)
+
+	" If fo=~2 and there are more than one line to align get the indent
+	" of the second line and retab it.
+	if a:0==0 && match(&formatoptions,'2') >= 0 && a:lastline > a:firstline
+		execute a:firstline + 1
+		normal! ^
+		let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
+	endif
+
 	" Align the rest of the lines
 	for l:i in range(a:lastline-a:firstline)
-		let l:line = a:firstline + 1 + l:i
+		let l:line = a:firstline + 1 + l:i " First line is already printed, hence +1
 		let l:line_replace = s:Align_String_Left(getline(l:line))
-		call setline(l:line,l:start_ws.l:line_replace)
+		call setline(l:line,l:leading_ws.l:line_replace)
 	endfor
 endfunction
 
@@ -65,35 +71,42 @@ function! s:Align_Range_Right(width) "{{{1
 		" If line would be full of spaces just print empty line.
 		call setline(line('.'),'')
 	else
-		call setline(line('.'),l:line_replace)
+		" Retab beginning whitespaces
+		let l:leading_ws = s:Retab_Indent(strlen(substitute(l:line_replace,'\v^( *).*$','\1','')))
+		" Get the rest of the line
+		let l:line_replace = substitute(l:line_replace,'^ *','','')
+		call setline(line('.'),l:leading_ws.l:line_replace)
 	endif
 endfunction
 
 function! s:Align_Range_Justify(width, ...) range "{{{1
-	" Get the indent of the first line.
-	let l:start_ws = substitute(getline(a:firstline),'\m\S.*','','')
-	" 'textwidth' minus indent to get the actual text area width
+	" Get the indent for the first line.
+	execute a:firstline
 	normal! ^
-	let l:width = a:width-virtcol('.')+1
-	let l:line_replace = substitute(l:start_ws.s:Align_String_Justify(getline(a:firstline),l:width),'\m\s*$','','')
+	let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
+	" 'textwidth' minus indent to get the actual text area width
+	let l:width = a:width-(virtcol('.')-1)
+	let l:line_replace = substitute(l:leading_ws.s:Align_String_Justify(getline(a:firstline),l:width),'\m\s*$','','')
 	call setline(a:firstline,l:line_replace)
 	" If fo+=2 and range is more than one line get the indent of the
 	" second line.
 	if match(&formatoptions,'2') >= 0 && a:lastline > a:firstline
-		let l:start_ws = substitute(getline(a:firstline+1),'\m\S.*','','')
+		"let l:leading_ws = substitute(getline(a:firstline+1),'\m\S.*','','')
 		execute a:firstline+1
 		normal! ^
-		let l:width = a:width-virtcol('.')+1
+		let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
+		let l:width = a:width-(virtcol('.')-1)
 	endif
 	" Justify all the lines in range
 	for l:i in range(a:lastline-a:firstline)
 		let l:line = a:firstline + 1 + l:i
 		if l:line == a:lastline && a:0
-			" Align the last line to left
-			call setline(l:line,l:start_ws.s:Truncate_Spaces(getline(l:line)))
+			" Align the last line to left if the optional second
+			" parameter was given.
+			call setline(l:line,l:leading_ws.s:Align_String_Left(getline(l:line)))
 		else
 			" Other lines left-right justified
-			let l:line_replace = substitute(l:start_ws.s:Align_String_Justify(getline(l:line),l:width),'\m\s*$','','')
+			let l:line_replace = substitute(l:leading_ws.s:Align_String_Justify(getline(l:line),l:width),'\m\s*$','','')
 			call setline(l:line,l:line_replace)
 		endif
 	endfor
@@ -158,7 +171,7 @@ function! s:Align_String_Justify(string, width) "{{{1
 	" Ok, there are more than one word in the string so we get to do some
 	" real work...
 
-	" Make a list which each item represent a space available in the
+	" Make a list of which each item represent a space available in the
 	" string. The value means how many spaces there are. At the moment set
 	" every list item to one: [1, 1, 1, 1, ...]
 	let l:space_list = []
@@ -284,7 +297,7 @@ function! s:Distributed_Selection(list, pick) "{{{1
 	" the original list. Items are choosed in distributed manner. For
 	" example, if 'pick' is 1 then the algorithm chooses an item near the
 	" center of the 'list'. If 'pick' is 2 then the first one is about 1/3
-	" from the begining and the another one about 2/3 from the begining.
+	" from the beginning and the another one about 2/3 from the beginning.
 
 	" l:pick_list is a list of 0's and 1's and its length will be the
 	" same as original list's. Number 1 means that this list item will be
@@ -293,7 +306,7 @@ function! s:Distributed_Selection(list, pick) "{{{1
 	" (i.e., two items evenly picked from a list of five items)
 	let l:pick_list = []
 
-	" First pick items evenly from the begining of the list. This also
+	" First pick items evenly from the beginning of the list. This also
 	" actually constructs the list.
 	let l:div1 = len(a:list) / a:pick
 	let l:mod1 = len(a:list) % a:pick
@@ -317,7 +330,7 @@ function! s:Distributed_Selection(list, pick) "{{{1
 		endfor
 	endif
 
-	" There may be very different number of zeros in the begining and end
+	" There may be very different number of zeros in the beginning and end
 	" of the list. We count them.
 	let l:zeros_begin = 0
 	for l:i in l:pick_list
@@ -340,17 +353,17 @@ function! s:Distributed_Selection(list, pick) "{{{1
 	if l:zeros_end
 		" Remove 0 items from the end. We need to remove them first
 		" from the end because list items' index number will change
-		" when items are removed from the begining. Then it would make
+		" when items are removed from the beginning. Then it would make
 		" a bit more difficult to remove ending spaces.
 		call remove(l:pick_list,len(l:pick_list)-l:zeros_end,-1)
 	endif
 	if l:zeros_begin
-		" Remove 0 items from the begining.
+		" Remove 0 items from the beginning.
 		call remove(l:pick_list,0,l:zeros_begin-1)
 	endif
 	let l:zeros_both = l:zeros_begin + l:zeros_end
 
-	" Put even amount of zeros to begining and end
+	" Put even amount of zeros to beginning and end
 	for l:i in range(l:zeros_both/2)
 		call insert(l:pick_list,0,0)
 	endfor
@@ -367,6 +380,21 @@ function! s:Distributed_Selection(list, pick) "{{{1
 		endif
 	endfor
 	return l:new_list
+endfunction
+
+function! s:Retab_Indent(column) "{{{1
+	" column = the left indent column starting from 0
+	" Function returns a string of whitespaces, a mixture of tabs and
+	" spaces depending on the 'expandtab' option.
+	if &expandtab
+		" Only spaces
+		return repeat(' ',a:column)
+	else
+		" Tabs and spaces
+		let l:tabs = a:column / &tabstop
+		let l:spaces = a:column % &tabstop
+		return repeat(nr2char(9),l:tabs).repeat(' ',l:spaces)
+	endif
 endfunction
 
 function! textformat#Quick_Align_Left() "{{{1
@@ -403,21 +431,16 @@ endfunction
 
 function! textformat#Quick_Align_Center() "{{{1
 	let l:width = &textwidth
-	" It's not good idea to use tabs in text area which has very different
-	" number of spaces before the lines. Plain spaces are more reliable so
-	" we set 'expandtab' variable before the operation.
-	let l:expandtab = &expandtab
-	setlocal expandtab
 	if l:width == 0 | let l:width = s:default_width  | endif
 	let l:pos = getpos('.')
 	silent normal! vip:call s:Align_Range_Center(l:width)
 	call setpos('.',l:pos)
-	let &l:expandtab = l:expandtab
 endfunction
 
 function! textformat#Align_Command(align, ...) range "{{{1
-	" For the left align the optional parameter a:1 is [indent]. For
-	" others it's [width].
+	" For left align the optional parameter a:1 is [indent]. For others
+	" it's [width].
+	let l:pos = getpos('.')
 	if a:align == 'left'
 		if a:0 && a:1 >= 0
 			execute a:firstline.','.a:lastline.'call s:Align_Range_Left('.a:1.')'
@@ -438,16 +461,10 @@ function! textformat#Align_Command(align, ...) range "{{{1
 		elseif a:align == 'justify'
 			execute a:firstline.','.a:lastline.'call s:Align_Range_Justify('.l:width.')'
 		elseif a:align == 'center'
-			" It's not good idea to use tabs in text area which
-			" has very different number of spaces before the
-			" lines. Plain spaces are more reliable so we set
-			" 'expandtab' variable before the operation.
-			let l:expandtab = &expandtab
-			setlocal expandtab
 			execute a:firstline.','.a:lastline.'call s:Align_Range_Center('.l:width.')'
-			let &l:expandtab = l:expandtab
 		endif
 	endif
+	call setpos('.',l:pos)
 endfunction
 
 " vim600: fdm=marker

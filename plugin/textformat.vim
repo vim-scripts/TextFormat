@@ -1,13 +1,8 @@
 " Text formatter plugin for Vim text editor
 "
-" This plugin provides commands and key mappings to quickly align and format
-" text. Text can be aligned to either left or right margin or justified to
-" both margins or centered. The text formatting commands in this plugin are
-" a bit different from those integrated to Vim.
-"
-" Version:    0.9
+" Version:    1.0
 " Maintainer: Teemu Likonen <tlikonen@iki.fi>
-" GetLatestVimScripts: 0 0 :AutoInstall: textformat.vim
+" GetLatestVimScripts: 2324 1 :AutoInstall: textformat.vim
 "
 " {{{ Copyright and license
 "
@@ -27,10 +22,17 @@
 " along with this program; if not, write to the Free Software
 " Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 "
-" The License text in full:
+" The license text:
 " 	http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 "
 " }}}
+
+if v:version < 700
+	echohl ErrorMsg
+	echomsg 'Error: TextFormat plugin needs Vim version 7.0 or later. Sorry.'
+	echohl None
+	finish
+endif
 
 command! -nargs=? -range AlignLeft <line1>,<line2>call textformat#Align_Command('left',<args>)
 command! -nargs=? -range AlignRight <line1>,<line2>call textformat#Align_Command('right',<args>)
