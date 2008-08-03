@@ -1,6 +1,6 @@
 " Text formatter plugin for Vim text editor
 "
-" Version:    1.0
+" Version:    1.1
 " Maintainer: Teemu Likonen <tlikonen@iki.fi>
 " GetLatestVimScripts: 2324 1 :AutoInstall: textformat.vim
 "
@@ -149,12 +149,12 @@ function! s:Align_String_Justify(string, width) "{{{1
 	if l:string =~ '\v^ *$'
 		return repeat(' ',a:width)
 	endif
-	let l:string_width = s:String_Width(l:string)
-	if l:string_width >= a:width
+	if s:String_Width(s:Add_Double_Spacing(l:string)) >= a:width
 		" The original string is longer than width so we can just
 		" return the string. No need to go further.
-		return l:string
+		return s:Add_Double_Spacing(l:string)
 	endif
+	let l:string_width = s:String_Width(l:string)
 
 	" This many extra spaces we need.
 	let l:more_spaces = a:width-l:string_width
@@ -294,7 +294,7 @@ function! s:Distributed_Selection(list, pick) "{{{1
 	" 'pick' is a number how many of the list's items we want to choose
 	"
 	" This function returns a list which has 'pick' number of items from
-	" the original list. Items are choosed in distributed manner. For
+	" the original list. Items are chosen in distributed manner. For
 	" example, if 'pick' is 1 then the algorithm chooses an item near the
 	" center of the 'list'. If 'pick' is 2 then the first one is about 1/3
 	" from the beginning and the another one about 2/3 from the beginning.
@@ -398,13 +398,13 @@ function! s:Retab_Indent(column) "{{{1
 endfunction
 
 function! textformat#Quick_Align_Left() "{{{1
-	let l:pos = getpos('.')
 	let l:autoindent = &autoindent
 	let l:formatoptions = &formatoptions
 	setlocal autoindent formatoptions-=w
+	let l:pos = getpos('.')
 	silent normal! vip:call s:Align_Range_Left()
-	silent normal! gwip
 	call setpos('.',l:pos)
+	silent normal! gwip
 	let &l:formatoptions = l:formatoptions
 	let &l:autoindent = l:autoindent
 endfunction
@@ -420,13 +420,18 @@ endfunction
 function! textformat#Quick_Align_Justify() "{{{1
 	let l:width = &textwidth
 	if l:width == 0 | let l:width = s:default_width  | endif
+	let l:autoindent = &autoindent
+	let l:formatoptions = &formatoptions
+	setlocal autoindent formatoptions-=w
 	let l:pos = getpos('.')
-	let l:joinspaces = &joinspaces
-	setlocal nojoinspaces
-	call textformat#Quick_Align_Left()
-	let &l:joinspaces = l:joinspaces
+	silent normal! vip:call s:Align_Range_Left()
+	call setpos('.',l:pos)
+	silent normal! gwip
+	let l:pos = getpos('.')
 	silent normal! vip:call s:Align_Range_Justify(l:width,1)
 	call setpos('.',l:pos)
+	let &l:formatoptions = l:formatoptions
+	let &l:autoindent = l:autoindent
 endfunction
 
 function! textformat#Quick_Align_Center() "{{{1

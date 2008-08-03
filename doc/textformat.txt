@@ -1,4 +1,4 @@
-*textformat.txt*	Vim Text Formatter  (version 1.0)	    2008-08-03
+*textformat.txt*	Vim Text Formatter  (version 1.1)	    2008-08-04
 
 
 Description	This plugin provides commands and key mappings to quickly
@@ -90,15 +90,12 @@ or something. The "daily tools" are explained later.
 :[range]AlignJustify [width]				       *:AlignJustify*
 			Left-right justify lines in [range] (default is
 			current line). This means adjusting spaces between
-			words so that the lines fit. Unlike the previous
-			commands this does not use 'joinspaces' option.
-			Instead, extra spaces are always first added after
-			sentences ending with ".", "?" or "!". Then to other
-			available positions.
-
-			The first line in the [range] defines the indent for
-			the rest of the lines, except if 'formatoptions'
-			contains "2" then it's the second line.
+			words so that the lines fit. If 'joinspaces' is set
+			then at least two spaces are printed after every
+			sentence ending with ".", "?" or "!". The first line
+			in [range] defines the indent for the rest of the
+			lines, except if 'formatoptions' contains "2" then
+			it's the second line.
 
 			Numeric argument [width] is used as the right margin.
 			If [width] is not given 'textwidth' is used instead.
@@ -238,12 +235,19 @@ Happy formatting!
 ==============================================================================
 5. Version history					  *textformat-history*
 
+	v1.1							    2008-08-04
+
+	      - Keep cursor position more accurately when formatting
+		a paragraph with \al and \aj.
+	      - When 'joinspaces' is set insert two spaces after .?!
+		punctuation with left-right justify. This is now similar to
+		other commands.
+
 	v1.0							    2008-08-03
 
 	      - All the commands now follow user's 'expandtab' setting and
 		print leading whitespaces accordingly. Now this works just
 		like :left, :right and :center commands.
-
 	      - The left-aligned last line in justified paragraph did not
 		honor 'joinspaces'. Fixed.
 
