@@ -1,77 +1,116 @@
 " Text formatter plugin for Vim text editor
 "
-" Version:    1.1
-" Maintainer: Teemu Likonen <tlikonen@iki.fi>
-" GetLatestVimScripts: 2324 1 :AutoInstall: textformat.vim
-"
-" {{{ Copyright and license
-"
-" Copyright (C) 2008 Teemu Likonen <tlikonen@iki.fi>
-"
-" This program is free software; you can redistribute it and/or modify
-" it under the terms of the GNU General Public License as published by
-" the Free Software Foundation; either version 2 of the License, or
-" (at your option) any later version.
-"
-" This program is distributed in the hope that it will be useful,
-" but WITHOUT ANY WARRANTY; without even the implied warranty of
-" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-" GNU General Public License for more details.
-"
-" You should have received a copy of the GNU General Public License
-" along with this program; if not, write to the Free Software
-" Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-"
-" The license text:
-" 	http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-"
-" }}}
+" Version:		2.0
+" Last Change:		2008-08-10
+" Maintainer:		Teemu Likonen <tlikonen@iki.fi>
+" License:		This file is placed in the public domain.
+" GetLatestVimScripts:	2324 1 :AutoInstall: textformat.vim
+
+"{{{1 The beginning stuff
+if &compatible
+	finish
+endif
+let s:save_cpo = &cpo
+set cpo&vim
 
 " Constant variables(s) {{{1
 let s:default_width = 80
 
 function! s:Align_Range_Left(...) range "{{{1
-	" Get the indent for the text area (or only for the first line) and
-	" retab it according to 'expandtab'.
+	" The optional parameter is the left indent. If it is not given we
+	" detect the indent used in the buffer.
 	if a:0 && a:1 >= 0
-		" If indent is given as the parameter form a retabbed
-		" whitespace string.
+		" The parameter was given so we just use that as the left
+		" indent.
 		let l:leading_ws = s:Retab_Indent(a:1)
+		for l:line in range(a:firstline,a:lastline)
+			let l:line_string = getline(l:line)
+			let l:line_replace = s:Align_String_Left(l:line_string)
+			if &formatoptions =~ 'w' && l:line_string =~ '\m\s$'
+				" Preserve trailing whitespace because fo=~w
+				let l:line_replace .= ' '
+			endif
+			if l:line_replace =~ '\m^\s*$'
+				call setline(l:line,'')
+			else
+				call setline(l:line,l:leading_ws.l:line_replace)
+			endif
+		endfor
 	else
-		" If indent is not given as a parameter get the indent of the
-		" first line.
-		execute a:firstline
-		normal! ^
-		let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
+		" The parameter was not given so we detect each paragraphs'
+		" indent.
+		let l:line = a:firstline
+		while l:line <= a:lastline
+			let l:line_string = getline(l:line)
+			if l:line_string =~ '\m^\s*$'
+				" The line is empty or contains only
+				" whitespaces so print empty line and
+				" continue.
+				call setline(l:line,'')
+				let l:line += 1
+				continue
+			endif
+
+			" Paragraph (or the whole line range) begins here so
+			" get the indent of the first line and print the line.
+			let l:leading_ws = s:Retab_Indent(s:Check_Indent(l:line))
+			let l:line_replace = s:Align_String_Left(l:line_string)
+			if &formatoptions =~ 'w' && l:line_string =~ '\m\s$'
+				let l:line_replace .= ' '
+			endif
+			call setline(l:line,l:leading_ws.l:line_replace)
+			let l:line += 1
+
+			" If fo=~w, does the paragraph end here? If yes,
+			" continue to next round and find a new first line.
+			if &formatoptions =~ 'w' && l:line_string =~ '\m\S$'
+				continue
+			endif
+
+			" If fo=~2 get the indent of the second line
+			if &formatoptions =~ '2'
+				let l:leading_ws = s:Retab_Indent(s:Check_Indent(l:line))
+			endif
+
+			" This loop will go through all the lines in the
+			" paragraph (or till the a:lastline) - starting from
+			" the second line.
+			while l:line <= a:lastline && getline(l:line) !~ '\m^\s*$'
+				let l:line_string = getline(l:line)
+				let l:line_replace = s:Align_String_Left(l:line_string)
+				if &formatoptions =~ 'w'
+					if l:line_string =~ '\m\s$'
+						call setline(l:line,l:leading_ws.l:line_replace.' ')
+						let l:line += 1
+						continue
+					else
+						call setline(l:line,l:leading_ws.l:line_replace)
+						let l:line += 1
+						" fo=~w and paragraph ends
+						" here so we break the loop.
+						" The next line is new first
+						" line.
+						break
+					endif
+				else
+					call setline(l:line,l:leading_ws.l:line_replace)
+					let l:line += 1
+				endif
+			endwhile
+		endwhile
 	endif
-
-	" Print the first line
-	let l:line_replace = s:Align_String_Left(getline(a:firstline))
-	call setline(a:firstline,l:leading_ws.l:line_replace)
-
-	" If fo=~2 and there are more than one line to align get the indent
-	" of the second line and retab it.
-	if a:0==0 && match(&formatoptions,'2') >= 0 && a:lastline > a:firstline
-		execute a:firstline + 1
-		normal! ^
-		let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
-	endif
-
-	" Align the rest of the lines
-	for l:i in range(a:lastline-a:firstline)
-		let l:line = a:firstline + 1 + l:i " First line is already printed, hence +1
-		let l:line_replace = s:Align_String_Left(getline(l:line))
-		call setline(l:line,l:leading_ws.l:line_replace)
-	endfor
 endfunction
 
 function! s:Align_Range_Right(width) "{{{1
 	let l:line_replace = s:Align_String_Right(getline('.'),a:width)
-	if l:line_replace =~ '\v^ *$'
+	if &formatoptions =~ 'w' && getline('.') =~ '\m\s$'
+		let l:line_replace .= ' '
+	endif
+	if l:line_replace =~ '\m^\s*$'
 		" If line would be full of spaces just print empty line.
 		call setline(line('.'),'')
 	else
-		" Retab beginning whitespaces
+		" Retab leading whitespaces
 		let l:leading_ws = s:Retab_Indent(strlen(substitute(l:line_replace,'\v^( *).*$','\1','')))
 		" Get the rest of the line
 		let l:line_replace = substitute(l:line_replace,'^ *','','')
@@ -80,58 +119,101 @@ function! s:Align_Range_Right(width) "{{{1
 endfunction
 
 function! s:Align_Range_Justify(width, ...) range "{{{1
-	" Get the indent for the first line.
-	execute a:firstline
-	normal! ^
-	let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
-	" 'textwidth' minus indent to get the actual text area width
-	let l:width = a:width-(virtcol('.')-1)
-	let l:line_replace = substitute(l:leading_ws.s:Align_String_Justify(getline(a:firstline),l:width),'\m\s*$','','')
-	call setline(a:firstline,l:line_replace)
-	" If fo+=2 and range is more than one line get the indent of the
-	" second line.
-	if match(&formatoptions,'2') >= 0 && a:lastline > a:firstline
-		"let l:leading_ws = substitute(getline(a:firstline+1),'\m\S.*','','')
-		execute a:firstline+1
-		normal! ^
-		let l:leading_ws = s:Retab_Indent(virtcol('.')-1)
-		let l:width = a:width-(virtcol('.')-1)
+	" If the optional second argument is given (and is non-zero) each
+	" paragraph's last line and range's last line is left-aligned.
+	if a:0 && a:1
+		let l:paragraph = 1
+	else
+		let l:paragraph = 0
 	endif
-	" Justify all the lines in range
-	for l:i in range(a:lastline-a:firstline)
-		let l:line = a:firstline + 1 + l:i
-		if l:line == a:lastline && a:0
-			" Align the last line to left if the optional second
-			" parameter was given.
-			call setline(l:line,l:leading_ws.s:Align_String_Left(getline(l:line)))
-		else
-			" Other lines left-right justified
-			let l:line_replace = substitute(l:leading_ws.s:Align_String_Justify(getline(l:line),l:width),'\m\s*$','','')
-			call setline(l:line,l:line_replace)
+	let l:line = a:firstline
+	while l:line <= a:lastline
+		let l:line_string = getline(l:line)
+		if l:line_string =~ '\m^\s*$'
+			" The line is empty or contains only
+			" whitespaces so print empty line and
+			" continue.
+			call setline(l:line,'')
+			let l:line += 1
+			continue
 		endif
-	endfor
+
+		" Paragraph (or the whole line range) begins here so
+		" get the indent of the first line and print the line.
+		let l:indent = s:Check_Indent(l:line)
+		let l:width = a:width - l:indent
+		let l:leading_ws = s:Retab_Indent(l:indent)
+
+		if l:paragraph && (l:line == a:lastline || getline(l:line+1) =~ '\m^\s*$' || (&formatoptions =~ 'w' && l:line_string =~ '\m\S$'))
+			let l:line_replace = s:Align_String_Left(l:line_string)
+		else
+			let l:line_replace = s:Align_String_Justify(l:line_string,l:width)
+		endif
+		if &formatoptions =~ 'w' && l:line_string =~ '\m\s$'
+			let l:line_replace .= ' '
+		endif
+		call setline(l:line,l:leading_ws.l:line_replace)
+		let l:line += 1
+
+		" If fo=~w, does the paragraph end here? If yes,
+		" continue to next round and find a new first line.
+		if &formatoptions =~ 'w' && l:line_string =~ '\m\S$'
+			continue
+		endif
+
+		" If fo=~2 get the indent of the second line
+		if &formatoptions =~ '2'
+			let l:indent = s:Check_Indent(l:line)
+			let l:width = a:width - l:indent
+			let l:leading_ws = s:Retab_Indent(l:indent)
+		endif
+
+		" This loop will go through all the lines in the
+		" paragraph (or till the a:lastline) - starting from
+		" paragraph's second line.
+		while l:line <= a:lastline && getline(l:line) !~ '\m^\s*$'
+			let l:line_string = getline(l:line)
+			if l:paragraph && (l:line == a:lastline || getline(l:line+1) =~ '\m^\s*$' || (&formatoptions =~ 'w' && l:line_string =~ '\m\S$'))
+				let l:line_replace = s:Align_String_Left(l:line_string)
+			else
+				let l:line_replace = s:Align_String_Justify(l:line_string,l:width)
+			endif
+			if &formatoptions =~ 'w'
+				if l:line_string =~ '\m\s$'
+					call setline(l:line,l:leading_ws.l:line_replace.' ')
+					let l:line += 1
+					continue
+				else
+					call setline(l:line,l:leading_ws.l:line_replace)
+					let l:line += 1
+					" fo=~w and paragraph ends
+					" here so we break the loop.
+					" The next line is new first
+					" line.
+					break
+				endif
+			else
+				call setline(l:line,l:leading_ws.l:line_replace)
+				let l:line += 1
+			endif
+		endwhile
+	endwhile
 endfunction
 
 function! s:Align_Range_Center(width) "{{{1
 	let l:line_replace = s:Truncate_Spaces(getline('.'))
 	let l:line_replace = s:Add_Double_Spacing(l:line_replace)
+	if &formatoptions =~ 'w' && getline('.') =~ '\m\s$'
+		let l:line_replace .= ' '
+	endif
 	call setline(line('.'),l:line_replace)
-	execute 'center '.a:width
+	execute '.center '.a:width
 endfunction
 
-function! s:Align_String_Left(string, ...) "{{{1
+function! s:Align_String_Left(string) "{{{1
 	let l:string_replace = s:Truncate_Spaces(a:string)
 	let l:string_replace = s:Add_Double_Spacing(l:string_replace)
-	if a:0 && a:1
-		" If optional width argument is given (and is non-zero) we pad
-		" the rest of string with spaces. Currently this code path is
-		" never needed.
-		let l:string_width = s:String_Width(l:string_replace)
-		let l:more_spaces = a:1-l:string_width
-		return l:string_replace.repeat(' ',l:more_spaces)
-	else
-		return l:string_replace
-	endif
+	return l:string_replace
 endfunction
 
 function! s:Align_String_Right(string, width) "{{{1
@@ -146,7 +228,7 @@ function! s:Align_String_Justify(string, width) "{{{1
 	let l:string = s:Truncate_Spaces(a:string)
 	" If the parameter string is empty we can just return a line full of
 	" spaces. No need to go further.
-	if l:string =~ '\v^ *$'
+	if l:string =~ '\m^ *$'
 		return repeat(' ',a:width)
 	endif
 	if s:String_Width(s:Add_Double_Spacing(l:string)) >= a:width
@@ -200,9 +282,9 @@ function! s:Align_String_Justify(string, width) "{{{1
 			let l:space_other = []
 			" Now, find those things:
 			for l:i in range(l:string_spaces)
-				if match(l:word_list[l:i],'\m\S[.?!]$') >= 0
+				if l:word_list[l:i] =~ '\m\S[.?!]$'
 					let l:space_sentence_full += [l:i]
-				elseif match(l:word_list[l:i],'\m\S[,:;]$') >= 0
+				elseif l:word_list[l:i] =~ '\m\S[,:;]$'
 					let l:space_sentence_semi += [l:i]
 				else
 					let l:space_other += [l:i]
@@ -382,6 +464,12 @@ function! s:Distributed_Selection(list, pick) "{{{1
 	return l:new_list
 endfunction
 
+function! s:Check_Indent(line) "{{{1
+	execute a:line
+	normal! ^
+	return virtcol('.')-1
+endfunction
+
 function! s:Retab_Indent(column) "{{{1
 	" column = the left indent column starting from 0
 	" Function returns a string of whitespaces, a mixture of tabs and
@@ -397,15 +485,65 @@ function! s:Retab_Indent(column) "{{{1
 	endif
 endfunction
 
+function! s:Reformat_Range(...) range "{{{1
+	if a:0 == 2
+		let l:first = a:1
+		let l:last = a:2
+	else
+		let l:first = a:firstline
+		let l:last = a:lastline
+	endif
+	let l:autoindent = &autoindent
+	setlocal autoindent
+	execute l:first
+	normal! 0
+	execute 'normal! V'.l:last.'G$gw'
+	let &l:autoindent = l:autoindent
+	" The formatting may change the last line of the range so we return
+	" it.
+	return line("'>")
+endfunction
+
+function! textformat#Visual_Align_Left() range "{{{1
+	execute a:firstline.','.a:lastline.'call s:Align_Range_Left()'
+	call s:Reformat_Range(a:firstline,a:lastline)
+endfunction
+
+function! textformat#Visual_Align_Right() range "{{{1
+	let l:width = &textwidth
+	if l:width == 0 | let l:width = s:default_width | endif
+
+	execute a:firstline.','.a:lastline.'call s:Align_Range_Right('.l:width.')'
+	normal! '>$
+endfunction
+
+function! textformat#Visual_Align_Justify() range "{{{1
+	let l:width = &textwidth
+	if l:width == 0 | let l:width = s:default_width | endif
+
+	execute a:firstline.','.a:lastline.'call s:Align_Range_Left()'
+
+	let l:last = s:Reformat_Range(a:firstline,a:lastline)
+	let l:pos = getpos('.')
+	execute a:firstline.','.l:last.'call s:Align_Range_Justify('.l:width.',1)'
+	call setpos('.',l:pos)
+endfunction
+
+function! textformat#Visual_Align_Center() range "{{{1
+	let l:width = &textwidth
+	if l:width == 0 | let l:width = s:default_width | endif
+
+	execute a:firstline.','.a:lastline.'call s:Align_Range_Center('.l:width.')'
+	normal! '>$
+endfunction
+
 function! textformat#Quick_Align_Left() "{{{1
 	let l:autoindent = &autoindent
-	let l:formatoptions = &formatoptions
-	setlocal autoindent formatoptions-=w
+	setlocal autoindent
 	let l:pos = getpos('.')
 	silent normal! vip:call s:Align_Range_Left()
 	call setpos('.',l:pos)
 	silent normal! gwip
-	let &l:formatoptions = l:formatoptions
 	let &l:autoindent = l:autoindent
 endfunction
 
@@ -421,8 +559,7 @@ function! textformat#Quick_Align_Justify() "{{{1
 	let l:width = &textwidth
 	if l:width == 0 | let l:width = s:default_width  | endif
 	let l:autoindent = &autoindent
-	let l:formatoptions = &formatoptions
-	setlocal autoindent formatoptions-=w
+	setlocal autoindent
 	let l:pos = getpos('.')
 	silent normal! vip:call s:Align_Range_Left()
 	call setpos('.',l:pos)
@@ -430,7 +567,6 @@ function! textformat#Quick_Align_Justify() "{{{1
 	let l:pos = getpos('.')
 	silent normal! vip:call s:Align_Range_Justify(l:width,1)
 	call setpos('.',l:pos)
-	let &l:formatoptions = l:formatoptions
 	let &l:autoindent = l:autoindent
 endfunction
 
@@ -471,5 +607,8 @@ function! textformat#Align_Command(align, ...) range "{{{1
 	endif
 	call setpos('.',l:pos)
 endfunction
+
+"{{{1 The ending stuff
+let &cpo = s:save_cpo
 
 " vim600: fdm=marker
