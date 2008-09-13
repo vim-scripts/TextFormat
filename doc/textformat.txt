@@ -1,12 +1,13 @@
-*textformat.txt*        Vim Text Formatter  (version 2.0)           2008-08-10
+*textformat.txt*        Vim Text Formatter  (version 2.1)           2008-09-13
 
 
 Description     This plugin provides commands and key mappings to quickly 
                 align and format text. Text can be easily reformatted and 
                 aligned to either left or right margin or justified to both 
-                margins or centered. Text formatting commands in this plugin 
-                are a bit different from those integrated to Vim. Together 
-                they make more powerful command set for formatting text.
+                margins or centered. The text formatting commands provided by 
+                this plugin are a bit more automatic and more intelligent than 
+                those integrated to Vim. Together they make more powerful 
+                command set for formatting text. 
 
 Author          Teemu Likonen <tlikonen@iki.fi>
 
@@ -17,8 +18,8 @@ Contents
 
         1. Quick start                          |textformat-start|
         2. Commands                             |textformat-commands|
-        3. Default key mappings                 |textformat-keymap-default|
-        4. User key mappings                    |textformat-keymap-user|
+        3. Default key mappings                 |textformat-keymap|
+        4. Configuration                        |textformat-config|
         5. Version history                      |textformat-history|
 
 ==============================================================================
@@ -34,9 +35,10 @@ this manual for more detailed instructions.
 <Leader>ac              Center lines
 
 In normal mode the commands operate on current paragraph; in visual mode they 
-operate on the selected lines. By default, <Leader> is the backslash key so by 
-default the mappings are actually \al, \ar, \aj and \ac. If you have changed 
-the g:mapleader variable in your .vimrc file <Leader> may be something else.
+operate on the selected lines. By default, <Leader> is the backslash key, so 
+the mappings are actually \al, \ar, \aj and \ac, by default. If you have 
+changed the g:mapleader variable in your .vimrc file <Leader> may be something 
+else.
 
 ==============================================================================
 2. Commands                                              *textformat-commands*
@@ -144,7 +146,7 @@ If you want to align text without truncating whitespaces use Vim's own align
 commands: |:left|, |:right| and |:center|.
 
 ==============================================================================
-3. Default key mappings                            *textformat-keymap-default*
+3. Default key mappings                                    *textformat-keymap*
 
 By default this plugin provides a couple of key mappings for convenient text 
 formatting. If the mappings have already been defined by user (or are taken by 
@@ -177,7 +179,7 @@ Normal mode (current paragraph) ~
                         between the first column and 'textwidth'. This does 
                         not reformat the paragraph because with centered text 
                         user usually wants to decide exactly what goes to what 
-                        line. Reformatting would make it difficult.
+                        line.
 
 
 Visual mode (range of lines) ~
@@ -213,7 +215,7 @@ contains "w". Each of them is reformatted separately with <Leader>al and
 <Leader>aj commands.
 
 New paragraph always begins after a blank line. If 'formatoptions' contains 
-"w" then new paragraph also begins after each line which ends with 
+"w" then new paragraph also begins after a line which ends with 
 a non-whitespace character. That is, with "w" in 'formatoptions' every line 
 which ends with a non-whitespace also ends a paragraph. In left-right justify 
 (<Leader>aj) such line is aligned to left. You need to ensure that there is 
@@ -223,15 +225,12 @@ does not contain "w" then all consecutive non-blank lines belong to same
 paragraph.
 
 ==============================================================================
-4. User key mappings                                  *textformat-keymap-user*
+4. Configuration                                           *textformat-config*
 
 The key mappings can be configured freely by user. This plugin uses the 
-default ones only if they are free and not mapped to some other things. We try 
-to be non-intrusive because this is a general-purpose tool which is likely 
-loaded automatically when Vim starts.
-
-Here's an example of lines you could put in your .vimrc file: >
-
+default ones only if they are free and not used for other purposes. Here's an 
+example of lines you could put to your .vimrc file:
+>
         nmap <F5> <Plug>Quick_Align_Paragraph_Left
         nmap <F6> <Plug>Quick_Align_Paragraph_Right
         nmap <F7> <Plug>Quick_Align_Paragraph_Justify
@@ -255,14 +254,18 @@ information about the key map commands.
 Most part of this plugin is loaded into memory when the text-formatting 
 commands or key maps are used for the first time. Only the very minimum is 
 automatically loaded when Vim is started. If you want to completely avoid 
-loading this plugin put the following line in your .vimrc file: >
-
+loading this plugin put the following line to your .vimrc file:
+>
         let g:loaded_textformat = 1
 
 Happy formatting!
 
 ==============================================================================
 5. Version history                                        *textformat-history*
+
+        v2.1                                                        2008-09-13
+
+              - Minor internal cleanup.
 
         v2.0                                                        2008-08-10
 

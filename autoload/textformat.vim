@@ -1,10 +1,10 @@
 " Text formatter plugin for Vim text editor
 "
-" Version:		2.0
-" Last Change:		2008-08-10
-" Maintainer:		Teemu Likonen <tlikonen@iki.fi>
-" License:		This file is placed in the public domain.
-" GetLatestVimScripts:	2324 1 :AutoInstall: textformat.vim
+" Version:              2.1
+" Last Change:          2008-09-13
+" Maintainer:           Teemu Likonen <tlikonen@iki.fi>
+" License:              This file is placed in the public domain.
+" GetLatestVimScripts:  2324 1 :AutoInstall: TextFormat
 
 "{{{1 The beginning stuff
 if &compatible
@@ -37,7 +37,7 @@ function! s:Align_Range_Left(...) range "{{{1
 			endif
 		endfor
 	else
-		" The parameter was not given so we detect each paragraphs'
+		" The parameter was not given so we detect each paragraph's
 		" indent.
 		let l:line = a:firstline
 		while l:line <= a:lastline
@@ -53,7 +53,7 @@ function! s:Align_Range_Left(...) range "{{{1
 
 			" Paragraph (or the whole line range) begins here so
 			" get the indent of the first line and print the line.
-			let l:leading_ws = s:Retab_Indent(s:Check_Indent(l:line))
+			let l:leading_ws = s:Retab_Indent(indent(l:line))
 			let l:line_replace = s:Align_String_Left(l:line_string)
 			if &formatoptions =~ 'w' && l:line_string =~ '\m\s$'
 				let l:line_replace .= ' '
@@ -69,7 +69,7 @@ function! s:Align_Range_Left(...) range "{{{1
 
 			" If fo=~2 get the indent of the second line
 			if &formatoptions =~ '2'
-				let l:leading_ws = s:Retab_Indent(s:Check_Indent(l:line))
+				let l:leading_ws = s:Retab_Indent(indent(l:line))
 			endif
 
 			" This loop will go through all the lines in the
@@ -140,7 +140,7 @@ function! s:Align_Range_Justify(width, ...) range "{{{1
 
 		" Paragraph (or the whole line range) begins here so
 		" get the indent of the first line and print the line.
-		let l:indent = s:Check_Indent(l:line)
+		let l:indent = indent(l:line)
 		let l:width = a:width - l:indent
 		let l:leading_ws = s:Retab_Indent(l:indent)
 
@@ -163,7 +163,7 @@ function! s:Align_Range_Justify(width, ...) range "{{{1
 
 		" If fo=~2 get the indent of the second line
 		if &formatoptions =~ '2'
-			let l:indent = s:Check_Indent(l:line)
+			let l:indent = indent(l:line)
 			let l:width = a:width - l:indent
 			let l:leading_ws = s:Retab_Indent(l:indent)
 		endif
@@ -265,7 +265,7 @@ function! s:Align_String_Justify(string, width) "{{{1
 	while l:more_spaces > 0
 		if l:more_spaces >= l:string_spaces
 			" More extra spaces are needed than there are spaces
-			" available in the string so we add one more space to
+			" available in the string so we add one more space 
 			" after every word (add 1 to items of space list).
 			for l:i in range(l:string_spaces)
 				let l:space_list[l:i] += 1
@@ -302,7 +302,8 @@ function! s:Align_String_Justify(string, width) "{{{1
 				if l:more_spaces == 0 | break | endif
 			else
 				" Distribute the rest of spaces evenly and
-				" break the loop. All the spaces are added.
+				" break the loop. All the spaces have been
+				" added.
 				for l:i in s:Distributed_Selection(l:space_sentence_full,l:more_spaces)
 					let l:space_list[l:i] +=1
 				endfor
@@ -321,7 +322,8 @@ function! s:Align_String_Justify(string, width) "{{{1
 				if l:more_spaces == 0 | break | endif
 			else
 				" Distribute the rest of spaces evenly and
-				" break the loop. All the spaces are added.
+				" break the loop. All the spaces have been
+				" added.
 				for l:i in s:Distributed_Selection(l:space_sentence_semi,l:more_spaces)
 					let l:space_list[l:i] +=1
 				endfor
@@ -343,7 +345,7 @@ function! s:Align_String_Justify(string, width) "{{{1
 	for l:item in range(l:string_spaces)
 		let l:string .= l:word_list[l:item].repeat(' ',l:space_list[l:item])
 	endfor
-	" Add the last word to the and and return the string.
+	" Add the last word to the end and return the string.
 	return l:string.l:word_list[-1]
 endfunction
 
@@ -412,8 +414,8 @@ function! s:Distributed_Selection(list, pick) "{{{1
 		endfor
 	endif
 
-	" There may be very different number of zeros in the beginning and end
-	" of the list. We count them.
+	" There may be very different number of zeros in the beginning and the
+	" end of the list. We count them.
 	let l:zeros_begin = 0
 	for l:i in l:pick_list
 		if l:i == 0
@@ -433,14 +435,14 @@ function! s:Distributed_Selection(list, pick) "{{{1
 
 	" Then we remove them.
 	if l:zeros_end
-		" Remove 0 items from the end. We need to remove them first
+		" Remove "0" items from the end. We need to remove them first
 		" from the end because list items' index number will change
-		" when items are removed from the beginning. Then it would make
-		" a bit more difficult to remove ending spaces.
+		" when items are removed from the beginning. Then it would be
+		" more difficult to remove trailing zeros.
 		call remove(l:pick_list,len(l:pick_list)-l:zeros_end,-1)
 	endif
 	if l:zeros_begin
-		" Remove 0 items from the beginning.
+		" Remove zero items from the beginning.
 		call remove(l:pick_list,0,l:zeros_begin-1)
 	endif
 	let l:zeros_both = l:zeros_begin + l:zeros_end
@@ -464,16 +466,10 @@ function! s:Distributed_Selection(list, pick) "{{{1
 	return l:new_list
 endfunction
 
-function! s:Check_Indent(line) "{{{1
-	execute a:line
-	normal! ^
-	return virtcol('.')-1
-endfunction
-
 function! s:Retab_Indent(column) "{{{1
-	" column = the left indent column starting from 0
-	" Function returns a string of whitespaces, a mixture of tabs and
-	" spaces depending on the 'expandtab' option.
+	" column = the left indent column starting from 0 Function returns
+	" a string of whitespaces, a mixture of tabs and spaces depending on
+	" the 'expandtab' and 'tabstop' options.
 	if &expandtab
 		" Only spaces
 		return repeat(' ',a:column)
@@ -481,7 +477,7 @@ function! s:Retab_Indent(column) "{{{1
 		" Tabs and spaces
 		let l:tabs = a:column / &tabstop
 		let l:spaces = a:column % &tabstop
-		return repeat(nr2char(9),l:tabs).repeat(' ',l:spaces)
+		return repeat("\<Tab>",l:tabs).repeat(' ',l:spaces)
 	endif
 endfunction
 
@@ -582,7 +578,7 @@ function! textformat#Align_Command(align, ...) range "{{{1
 	" For left align the optional parameter a:1 is [indent]. For others
 	" it's [width].
 	let l:pos = getpos('.')
-	if a:align == 'left'
+	if a:align ==? 'left'
 		if a:0 && a:1 >= 0
 			execute a:firstline.','.a:lastline.'call s:Align_Range_Left('.a:1.')'
 		else
@@ -597,11 +593,11 @@ function! textformat#Align_Command(align, ...) range "{{{1
 			let l:width = s:default_width
 		endif
 
-		if a:align == 'right'
+		if a:align ==? 'right'
 			execute a:firstline.','.a:lastline.'call s:Align_Range_Right('.l:width.')'
-		elseif a:align == 'justify'
+		elseif a:align ==? 'justify'
 			execute a:firstline.','.a:lastline.'call s:Align_Range_Justify('.l:width.')'
-		elseif a:align == 'center'
+		elseif a:align ==? 'center'
 			execute a:firstline.','.a:lastline.'call s:Align_Range_Center('.l:width.')'
 		endif
 	endif
